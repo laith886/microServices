@@ -7,60 +7,107 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
-## About Laravel
+# 🔒 Laravel Race Condition Demo
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+مشروع لتوضيح مشكلة Race Condition في Laravel وكيفية حلها باستخدام Database Locking.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 📋 المشكلة
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+عندما يحاول عدة users شراء منتج محدود الكمية بنفس الوقت، قد تحدث **Race Condition** تؤدي إلى:
+- بيع منتج واحد عدة مرات (Overselling)
+- stock سالب
+- بيانات غير متسقة
 
-## Learning Laravel
+## ✅ الحل
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+استخدام **Pessimistic Locking** مع **Optimistic Locking** لضمان:
+- عدم حدوث overselling
+- بيانات متسقة دائماً
+- أمان في البيئات المتعددة المستخدمين
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## 🚀 البدء السريع
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 1. تثبيت المتطلبات
+```bash
+composer install
+php artisan migrate
+```
 
-## Laravel Sponsors
+### 2. اختبار مع Locking (آمن)
+```bash
+php artisan app:reset-database
+php artisan app:test-single-product 6 4
+# شغّل 6 workers في terminals منفصلة
+php artisan app:check-results 4
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 3. اختبار بدون Locking (قد يظهر Race Condition)
+```bash
+php artisan app:reset-database
+php artisan app:test-race-without-lock 6 4
+# شغّل 6 workers في terminals منفصلة
+php artisan app:check-results 4
+```
 
-### Premium Partners
+## 📁 الملفات المهمة
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+```
+app/
+├── Jobs/
+│   ├── ProcessOrderJob.php           # مع locking
+│   └── ProcessOrderWithoutLockJob.php # بدون locking
+└── Console/Commands/
+    ├── ResetDatabase.php             # تنظيف البيانات
+    ├── TestSingleProduct.php         # اختبار مع locking
+    ├── TestRaceConditionWithoutLock.php # اختبار بدون locking
+    └── CheckResults.php              # فحص النتائج
 
-## Contributing
+database/migrations/
+└── 2025_01_04_000000_add_version_to_products_table.php # عمود version
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 📖 التفاصيل
 
-## Code of Conduct
+اقرأ [`TESTING_GUIDE.md`](TESTING_GUIDE.md) للتعليمات التفصيلية.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 🎯 الهدف التعليمي
 
-## Security Vulnerabilities
+هذا المشروع يوضح:
+- كيف تحدث Race Condition
+- تأثيرها على سلامة البيانات
+- كيفية حلها باستخدام Database Locks
+- أهمية الـ concurrency control
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 📊 النتائج المتوقعة
 
-## License
+### مع Locking:
+```
+✅ SUCCESS: Results are correct!
+Orders: 4, Stock: 0, Version: 4
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### بدون Locking (قد تحدث Race Condition):
+```
+❌ ERROR: Results are incorrect!
+💥 Overselling: 2 extra orders created
+Orders: 6, Stock: -2
+```
+
+## 🔧 التقنيات المستخدمة
+
+- **Laravel 10+**
+- **MySQL/PostgreSQL**
+- **Database Transactions**
+- **Pessimistic Locking** (`lockForUpdate()`)
+- **Optimistic Locking** (version column)
+- **Queue System**
+
+## 📚 المراجع
+
+- [Laravel Database Locks](https://laravel.com/docs/queries#pessimistic-locking)
+- [Database Concurrency Control](https://en.wikipedia.org/wiki/Concurrency_control)
+- [Race Condition](https://en.wikipedia.org/wiki/Race_condition)
+
+---
+
+**استمتع بتعلم كيفية حماية التطبيقات من Race Conditions!** 🚀

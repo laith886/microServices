@@ -42,6 +42,7 @@ Route::delete('DeleteAllCartItems',[CartItemsController::class,'DeleteAllCartIte
 
 
 Route::post('PlaceOrder',[OrderItemsController::class,'PlaceOrder'])->middleware('auth:sanctum');
+Route::post('PlaceOrderWithoutLock',[OrderItemsController::class,'PlaceOrderWithoutLock'])->middleware('auth:sanctum');
 
 
 Route::get('GetAllOrders',[OrderController::class,'index'])->middleware('auth:sanctum');
